@@ -139,17 +139,32 @@ export const normalizeHistory = (h: HistoryEntry): HistoryEntry => {
   return { ...h, shipped, inReview, inProgress, notStarted, blocked: 0 };
 };
 
-export const weekMonday = (dateStr: string): string => {
-  const d = new Date(dateStr);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const mon = new Date(d);
-  mon.setDate(diff);
-  return mon.toISOString().slice(0, 10);
+// Converts any date string (ISO or PowerShell MM/DD/YYYY HH:MM:SS) to YYYY-MM-DD
+const toYMD = (s: string): string => {
+  if (!s) return '';
+  const mm = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s);
+  if (mm) return `${mm[3]}-${mm[1].padStart(2, '0')}-${mm[2].padStart(2, '0')}`;
+  return s.slice(0, 10);
 };
 
-export const fmtShortDate = (dateStr: string): string =>
-  new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+export const weekMonday = (dateStr: string): string => {
+  const ymd = toYMD(dateStr);
+  if (!ymd) return '';
+  const d = new Date(ymd + 'T00:00:00Z');
+  const day = d.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d.toISOString().slice(0, 10);
+};
 
-export const daysSince = (dateStr: string): number =>
-  Math.round((Date.now() - new Date(dateStr).getTime()) / 86400000);
+export const fmtShortDate = (dateStr: string): string => {
+  const ymd = toYMD(dateStr);
+  if (!ymd) return '';
+  return new Date(ymd + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+};
+
+export const daysSince = (dateStr: string): number => {
+  const ymd = toYMD(dateStr);
+  if (!ymd) return 0;
+  return Math.round((Date.now() - new Date(ymd + 'T00:00:00Z').getTime()) / 86400000);
+};
