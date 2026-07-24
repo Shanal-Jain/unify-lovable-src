@@ -317,13 +317,13 @@ function FlowTimesTable({ statusLog, initiatives }: { statusLog: StatusLog; init
 function SnapshotByBoard({ initiatives }: { initiatives: Initiative[] }) {
   const compute = (filter: (i: Initiative) => boolean) => {
     const inits = initiatives.filter(filter);
-    const shipped   = inits.filter(i => i.status === 'Retrospective').length;
-    const inReview  = inits.filter(i => i.status === 'Review').length;
-    const inProgress= inits.filter(i => i.status === 'Implementation').length;
-    const notStarted= inits.filter(i => ['Proposal','Design','Plan'].includes(i.status)).length;
-    const totalSubs = inits.reduce((a, i) => a + i.totalSubIssues, 0);
-    const closedSubs= inits.reduce((a, i) => a + i.closedSubIssues, 0);
-    const pctDone   = totalSubs > 0 ? Math.round(closedSubs / totalSubs * 100) : 0;
+    const shipped    = inits.reduce((a, i) => a + i.closedSubIssues, 0);
+    const inReview   = inits.reduce((a, i) => a + i.subIssues.filter(s => ['pr-open','polly-approved','human-approved','merged'].includes(s.stage) && s.state !== 'CLOSED').length, 0);
+    const inProgress = inits.reduce((a, i) => a + i.subIssues.filter(s => s.stage === 'in-progress').length, 0);
+    const notStarted = inits.reduce((a, i) => a + i.subIssues.filter(s => s.stage === 'no-pr' && s.state !== 'CLOSED').length, 0);
+    const totalSubs  = inits.reduce((a, i) => a + i.totalSubIssues, 0);
+    const closedSubs = inits.reduce((a, i) => a + i.closedSubIssues, 0);
+    const pctDone    = totalSubs > 0 ? Math.round(closedSubs / totalSubs * 100) : 0;
     return { total: inits.length, shipped, inReview, inProgress, notStarted, pctDone };
   };
   const bb = compute(i => i.team === 'Beaky Blinders' || i.team === 'Both');
