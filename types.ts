@@ -24,6 +24,7 @@ export interface SubIssue {
   pollyBlocked: boolean;
   humanApprovers: string[];
   requestedReviewers: string[];
+  changesRequestedBy: string[];
   subTaskTotal: number;
   subTaskClosed: number;
   createdAt: string;
@@ -102,7 +103,7 @@ export interface HistoryEntry {
   demo?: boolean;
   initiatives?: Initiative[];
   perTeam?: {
-    Ironclad?: { shipped: number; inReview: number; inProgress: number; notStarted: number };
+    'Beaky Blinders'?: { shipped: number; inReview: number; inProgress: number; notStarted: number };
     Raven?: { shipped: number; inReview: number; inProgress: number; notStarted: number };
   };
 }
@@ -148,4 +149,4 @@ export interface DashboardSnapshot {
 }
 
 export type TeamFilter = 'all' | 'Beaky Blinders' | 'Raven';
-export type TabId = 'overview' | 'trends' | 'bugs' | 'support';
+export type TabId = 'overview' | 'trends' | 'blockers' | 'bugs' | 'support';

@@ -15,11 +15,9 @@ export function useDashboard(): UseDashboardResult {
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchLatest = (cancelled: { v: boolean }) => {
     setLoading(true);
     setError(null);
-
     supabase
       .from('dashboard_snapshots')
       .select('*')
@@ -27,17 +25,29 @@ export function useDashboard(): UseDashboardResult {
       .limit(1)
       .single()
       .then(({ data: row, error: err }) => {
-        if (cancelled) return;
-        if (err) {
-          setError(err.message);
-          setLoading(false);
-          return;
-        }
+        if (cancelled.v) return;
+        if (err) { setError(err.message); setLoading(false); return; }
         setData(row as DashboardSnapshot);
         setLoading(false);
       });
+  };
 
-    return () => { cancelled = true; };
+  useEffect(() => {
+    const cancelled = { v: false };
+    fetchLatest(cancelled);
+
+    // Real-time: re-fetch whenever a new snapshot is upserted
+    const channel = supabase
+      .channel('dashboard_snapshots_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dashboard_snapshots' }, () => {
+        if (!cancelled.v) fetchLatest(cancelled);
+      })
+      .subscribe();
+
+    return () => {
+      cancelled.v = true;
+      supabase.removeChannel(channel);
+    };
   }, [tick]);
 
   return { data, loading, error, refetch: () => setTick(t => t + 1) };

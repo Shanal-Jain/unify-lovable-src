@@ -5,6 +5,7 @@ import { TrendsTab } from '../components/TrendsTab';
 import { RoadmapTab } from '../components/RoadmapTab';
 import { BugsTab } from '../components/BugsTab';
 import { SupportTab } from '../components/SupportTab';
+import { BlockersTab } from '../components/BlockersTab';
 import { C, blockerInclude } from '../utils';
 import { TeamFilter, TabId, Initiative } from '../types';
 
@@ -90,12 +91,11 @@ export default function Index() {
   // KPI calculations
   const kpi = useMemo(() => {
     if (!data) return { blocked: 0, blockedNums: [] as number[], shippedWk: 0 };
-    const blockedIssues = new Set<number>();
-    vis.forEach(i => i.subIssues.forEach(s => { if (blockerInclude(s)) blockedIssues.add(i.number); }));
-    const blockedNums = [...blockedIssues];
+    const blockedSubNums: number[] = [];
+    vis.forEach(i => i.subIssues.forEach(s => { if (blockerInclude(s)) blockedSubNums.push(s.number); }));
     const cutoff = Date.now() - 7 * 86400000;
     const shippedWk = (data.shipped ?? []).filter(s => s.closedAt && new Date(s.closedAt).getTime() >= cutoff).length;
-    return { blocked: blockedIssues.size, blockedNums, shippedWk };
+    return { blocked: blockedSubNums.length, blockedNums: blockedSubNums, shippedWk };
   }, [vis, data]);
 
   const blockedSub = kpi.blockedNums.length
@@ -177,10 +177,11 @@ export default function Index() {
 
         {/* ── tabs ── */}
         <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 24, overflowX: 'auto' }}>
-          <TabBtn id="overview" label="Overview"                           active={tab === 'overview'} onClick={() => setTab('overview')} />
-          <TabBtn id="trends"   label="Trends"                             active={tab === 'trends'}   onClick={() => setTab('trends')} />
-          <TabBtn id="bugs"     label={`Bugs (${data.bugs.length})`}       active={tab === 'bugs'}     onClick={() => setTab('bugs')} />
-          <TabBtn id="support"  label={`Support (${data.support.length})`} active={tab === 'support'}  onClick={() => setTab('support')} />
+          <TabBtn id="overview"  label="Overview"                                                        active={tab === 'overview'}  onClick={() => setTab('overview')} />
+          <TabBtn id="trends"    label="Trends"                                                          active={tab === 'trends'}    onClick={() => setTab('trends')} />
+          <TabBtn id="blockers"  label={kpi.blocked > 0 ? `Blockers (${kpi.blocked})` : 'Blockers'}     active={tab === 'blockers'}  onClick={() => setTab('blockers')} />
+          <TabBtn id="bugs"      label={`Bugs (${data.bugs.length})`}                                    active={tab === 'bugs'}      onClick={() => setTab('bugs')} />
+          <TabBtn id="support"   label={`Support (${data.support.length})`}                              active={tab === 'support'}   onClick={() => setTab('support')} />
         </div>
 
         {/* ── tab content ── */}
@@ -192,9 +193,10 @@ export default function Index() {
             </div>
           </>
         )}
-        {tab === 'trends'  && <TrendsTab shipped={data.shipped} history={data.history} statusLog={data.status_log} cycleData={data.cycle_data} initiatives={vis} />}
-        {tab === 'bugs'    && <BugsTab bugs={data.bugs} />}
-        {tab === 'support' && <SupportTab support={data.support} />}
+        {tab === 'trends'   && <TrendsTab shipped={data.shipped} history={data.history} statusLog={data.status_log} cycleData={data.cycle_data} initiatives={vis} />}
+        {tab === 'blockers' && <BlockersTab initiatives={vis} />}
+        {tab === 'bugs'     && <BugsTab bugs={data.bugs} />}
+        {tab === 'support'  && <SupportTab support={data.support} />}
       </div>
     </div>
   );

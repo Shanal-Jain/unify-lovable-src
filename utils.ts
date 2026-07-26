@@ -100,15 +100,22 @@ export const whyBlocked = (s: SubIssue): string => {
   if (par && !par.merged) {
     const state = par.state === 'open' ? 'still open' : (par.number ? 'closed unmerged' : 'no PR opened yet');
     const ref = par.number ? `PR #${par.number} (${par.branch}) — ${state}` : `branch ${par.branch} — ${state}`;
-    return `Stacked on ${ref}; can't merge until it does`;
+    return `Stacked on ${ref} — can't merge until the parent merges`;
   }
-  if (s.mergeState === 'dirty') return 'Merge conflict — needs a rebase on main';
-  if (s.failingCheck) return 'Red check: ' + s.failingCheck;
+  if (s.mergeState === 'dirty') return 'Merge conflict — needs a rebase';
+  if (s.failingCheck) return 'CI check failing: ' + s.failingCheck;
+  const crb = s.changesRequestedBy?.length ? s.changesRequestedBy.join(', ') : null;
   const rv = revNames(s);
-  if (s.stage === 'human-approved') return `Approved${rv ? ' by ' + rv : ''} — awaiting merge`;
-  if (s.stage === 'polly-approved') return rv ? `polly-gate passed; awaiting human review from ${rv}` : 'polly-gate passed; awaiting human review';
-  if (s.stage === 'pr-open') return rv ? `PR open — awaiting review from ${rv}` : 'PR open — awaiting review';
-  if (s.stage === 'in-progress') return `Being written by ${s.engineer ? '@' + s.engineer : 'the assignee'} — no PR opened yet`;
+  if (s.stage === 'human-approved') return `Approved${rv ? ' by ' + rv : ''} — ready to merge`;
+  if (s.stage === 'polly-approved') {
+    if (crb) return `Changes requested by ${crb} — needs revision`;
+    return rv ? `Waiting on ${rv} to review` : 'No reviewer assigned';
+  }
+  if (s.stage === 'pr-open') {
+    if (crb) return `Actively being reviewed — changes requested by ${crb}`;
+    return rv ? `Waiting on ${rv} to review` : 'PR open — no reviewer assigned yet';
+  }
+  if (s.stage === 'in-progress') return `No PR opened yet${s.engineer ? ' — being worked by @' + s.engineer : ''}`;
   return '';
 };
 
@@ -118,13 +125,17 @@ export const waitingOn = (s: SubIssue): string => {
     const state = par.state === 'open' ? 'still open' : (par.number ? 'closed unmerged' : 'no PR opened yet');
     return par.number ? `PR #${par.number} (${par.branch}) — ${state}` : `branch ${par.branch} — ${state}`;
   }
-  if (s.mergeState === 'dirty') return 'A rebase on main';
-  if (s.failingCheck) return 'Failing check: ' + s.failingCheck;
+  if (s.mergeState === 'dirty') return 'Rebase';
+  if (s.failingCheck) return s.failingCheck;
+  const crb = s.changesRequestedBy?.length ? s.changesRequestedBy.join(', ') : null;
   const rv = revNames(s);
-  if ((s.stage === 'polly-approved' || s.stage === 'pr-open') && rv) return rv;
   if (s.stage === 'human-approved') return 'Merge';
-  if (s.stage === 'in-progress') return s.engineer ? '@' + s.engineer : 'the assignee';
-  if (s.stage === 'polly-approved' || s.stage === 'pr-open') return 'A Birdwatcher reviewer (none requested)';
+  if (s.stage === 'polly-approved' || s.stage === 'pr-open') {
+    if (crb) return crb;
+    if (rv) return rv;
+    return '—';
+  }
+  if (s.stage === 'in-progress') return s.engineer ? s.engineer : '—';
   return '—';
 };
 
